@@ -29,3 +29,8 @@ struct PacketEvent {
     Protocol protocol;
     int bytes;
 };
+
+struct AnimatedPacket {
+    int eventID;
+    float progress;
+};

@@ -175,10 +175,37 @@ int main()
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
     glEnableVertexAttribArray(0);
     glBindVertexArray(0);
+
+    // packet animation
+	Shader packetShader(
+		"../../../shaders/packet.vert",
+		"../../../shaders/packet.frag"
+	);
+
+    unsigned int packetInstanceVBO;
+	glGenBuffers(1, &packetInstanceVBO);
+
+	float simTime = 0.0f;
+	float simSpeed = 1.0f;
+	const float TRAVEL_TIME = 2.0f;
+
+    std::vector<AnimatedPacket> activePackets;
+	int nextEventIndex = 0;
+
+
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
+
+        // delta time
+
+        static float lastFrame = 0.0f;
+        float currentFrame = (float)glfwGetTime();
+        float deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        simTime += deltaTime * simSpeed;
 
         // Clear screen
         glClearColor(0.08f, 0.08f, 0.10f, 1.0f);
@@ -193,9 +220,86 @@ int main()
 		glDrawArrays(GL_LINES, 0, (int)edgeVertices.size());
 
 
+        // animation
 
+		while (nextEventIndex < (int)cap.events.size() && cap.events[nextEventIndex].timestamp <= simTime)
+		{
+            AnimatedPacket ap;
+            ap.eventID = nextEventIndex;
+			ap.progress = 0.0f;
+			activePackets.push_back(ap);
+			nextEventIndex++;
+		}
 
+        for (auto& ap : activePackets)
+        {
+            ap.progress = (simTime - cap.events[ap.eventID].timestamp) / TRAVEL_TIME;
+        }
 
+		activePackets.erase(std::remove_if(activePackets.begin(), activePackets.end(),
+			[](const AnimatedPacket& ap) { return ap.progress >= 1.0f; }),
+			activePackets.end()
+		); // gpt fix
+
+        struct PacketInstance {
+            glm::vec2 position;
+            glm::vec3 color;
+        };
+        
+        auto protoColor = [](Protocol p) -> glm::vec3 {
+            switch (p) {
+			case Protocol::TCP:   return { 0.2f, 0.6f, 1.0f }; // blue
+            case Protocol::UDP:   return { 0.4f, 1.0f, 0.4f }; // green
+            case Protocol::ICMP:  return { 1.0f, 0.4f, 0.4f }; // red
+            case Protocol::DNS:   return { 1.0f, 0.8f, 0.2f }; // orange
+            default:              return { 0.8f, 0.8f, 0.8f }; // gray
+            }
+         };
+
+        std::vector<PacketInstance> packetInstances;
+        for (auto& ap : activePackets)
+        {
+            auto& ev = cap.events[ap.eventID];
+            glm::vec2 src = cap.nodes[ev.src].position;
+            glm::vec2 dst = cap.nodes[ev.dst].position;
+            glm::vec2 pos = src + (dst - src) * ap.progress;
+
+            packetInstances.push_back({ pos, protoColor(ev.protocol) });
+        }
+
+        glBindBuffer(GL_ARRAY_BUFFER, packetInstanceVBO);
+        glBufferData(GL_ARRAY_BUFFER,
+            packetInstances.size() * sizeof(PacketInstance),
+            packetInstances.data(), GL_DYNAMIC_DRAW);
+
+        if (!packetInstances.empty())
+        {
+            glBindVertexArray(quadVAO);
+
+            // rebind instance VBO with packet data
+            glBindBuffer(GL_ARRAY_BUFFER, packetInstanceVBO);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(PacketInstance), (void*)0);
+            glEnableVertexAttribArray(1);
+            glVertexAttribDivisor(1, 1);
+
+            glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(PacketInstance), (void*)(2 * sizeof(float)));
+            glEnableVertexAttribArray(2);
+            glVertexAttribDivisor(2, 1);
+
+            packetShader.use();
+            packetShader.setFloat("uRadius", 8.0f);
+            packetShader.setVec2("uResolution", glm::vec2(SCR_WIDTH, SCR_HEIGHT));
+            glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, (int)packetInstances.size());
+
+            // restore node instance VBO for next frame
+            glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(NodeInstance), (void*)0);
+            glVertexAttribDivisor(1, 1);
+            glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(NodeInstance), (void*)(2 * sizeof(float)));
+            glVertexAttribDivisor(2, 1);
+
+            glBindVertexArray(0);
+        }
 
         nodeShader.use();
         nodeShader.setFloat("uRadius", 18.0f);
