@@ -2,6 +2,9 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <filesystem>
+// Custom headers
+#include "parser.h"
 
 // Window settings
 const unsigned int SCR_WIDTH = 1280;
@@ -22,6 +25,22 @@ void processInput(GLFWwindow* window)
 
 int main()
 {
+
+    ParsedCapture cap = parseCapture("../../../data/capture.json");
+
+    std::cout << "\n--- Nodes ---\n";
+    for (auto& n : cap.nodes)
+        std::cout << "  [" << n.id << "] " << n.ip
+        << "  pkts=" << n.totalPackets
+        << "  bytes=" << n.totalBytes << "\n";
+
+    std::cout << "\n--- Edges ---\n";
+    for (auto& e : cap.edges)
+        std::cout << "  " << cap.nodes[e.src].ip
+        << " <-> " << cap.nodes[e.dst].ip
+        << "  pkts=" << e.packetCount
+        << "  bytes=" << e.bytesTransferred << "\n";
+
     // Initialize GLFW
     glfwInit();
 
@@ -80,5 +99,8 @@ int main()
     }
 
     glfwTerminate();
+
+
+
     return 0;
 }

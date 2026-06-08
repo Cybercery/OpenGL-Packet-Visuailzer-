@@ -14,6 +14,7 @@ target_include_directories(glad PUBLIC external/glad/include)
 # Main executable
 add_executable(OpenGLApp
     src/main.cpp
+    src/parser.cpp
 )
 
 # Include directories
