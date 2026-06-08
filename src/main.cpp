@@ -5,7 +5,7 @@
 #include <filesystem>
 // Custom headers
 #include "parser.h"
-
+#include "shader.h"
 // Window settings
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
@@ -83,6 +83,73 @@ int main()
     // Register callbacks
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+    // sjader
+    Shader nodeShader(
+        "../../../shaders/node.vert", 
+        "../../../shaders/node.frag"
+    );
+
+	float quadVertices[] = {
+		-1.0f, -1.0f,
+		 1.0f, -1.0f,
+		 1.0f,  1.0f,
+		 -1.0f,  1.0f
+	};
+
+	unsigned int quadIndices[] = {
+		0, 1, 2,
+		2, 3, 0
+	};
+
+    struct NodeInstance {
+        glm::vec2 position;
+        glm::vec3 color;
+    };
+
+    std::vector<NodeInstance> nodeInstances;
+    for (auto& n : cap.nodes)
+        nodeInstances.push_back({ n.position, glm::vec3(0.3f, 0.7f, 1.0f) });
+
+    // buffer setup
+	unsigned int quadVAO, quadVBO, quadEBO, instanceVBO;
+
+	glGenVertexArrays(1, &quadVAO);
+	glGenBuffers(1, &quadVBO);
+	glGenBuffers(1, &quadEBO);
+	glGenBuffers(1, &instanceVBO);
+
+	glBindVertexArray(quadVAO);
+
+    // quad vertices
+	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+    
+    // indices
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, quadEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadIndices), quadIndices, GL_STATIC_DRAW);
+    
+    // per instance
+    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+    glBufferData(GL_ARRAY_BUFFER, nodeInstances.size() * sizeof(NodeInstance), nodeInstances.data(), GL_STATIC_DRAW);
+
+    // location 1 offset
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(NodeInstance), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribDivisor(1, 1);
+
+    // llocation 2 color
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(NodeInstance), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribDivisor(2, 1);
+
+    glBindVertexArray(0);
+
+    // blending for smooth circle edges (idk how it works)
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -92,7 +159,15 @@ int main()
         glClearColor(0.08f, 0.08f, 0.10f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // Draw here
+        // Draw
+        nodeShader.use();
+        nodeShader.setFloat("uRadius", 18.0f);
+        nodeShader.setVec2("uResolution", glm::vec2(SCR_WIDTH, SCR_HEIGHT));
+
+        glBindVertexArray(quadVAO);
+        glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, (int)nodeInstances.size());
+
+
 
         glfwSwapBuffers(window);
         glfwPollEvents();
