@@ -190,10 +190,10 @@ ParsedCapture parseCapture(const std::string& path)
 
 	// print
 	std::cout << "[parser] loaded: " << path << "\n";
-	std::cout << "  packets : " << result.events.size() << "\n";
-	std::cout << "  nodes   : " << result.nodes.size() << "\n";
-	std::cout << "  edges   : " << result.edges.size() << "\n";
-	std::cout << "  duration: " << result.duration << "s\n";
+	std::cout << "packets: " << result.events.size() << "\n";
+	std::cout << "nodes: " << result.nodes.size() << "\n";
+	std::cout << "edges: " << result.edges.size() << "\n";
+	std::cout << "duration: " << result.duration << "s\n";
 
 	return result;
 }

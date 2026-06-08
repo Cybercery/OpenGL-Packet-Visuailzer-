@@ -28,18 +28,18 @@ int main()
 
     ParsedCapture cap = parseCapture("../../../data/capture.json");
 
-    std::cout << "\n--- Nodes ---\n";
+    std::cout << "\nNodes\n";
     for (auto& n : cap.nodes)
-        std::cout << "  [" << n.id << "] " << n.ip
-        << "  pkts=" << n.totalPackets
-        << "  bytes=" << n.totalBytes << "\n";
+        std::cout << "[" << n.id << "]" << n.ip
+        << "pkts=" << n.totalPackets
+        << "bytes=" << n.totalBytes << "\n";
 
-    std::cout << "\n--- Edges ---\n";
+    std::cout << "\nEdges\n";
     for (auto& e : cap.edges)
-        std::cout << "  " << cap.nodes[e.src].ip
-        << " <-> " << cap.nodes[e.dst].ip
-        << "  pkts=" << e.packetCount
-        << "  bytes=" << e.bytesTransferred << "\n";
+        std::cout << cap.nodes[e.src].ip
+        << "<->" << cap.nodes[e.dst].ip
+        << " pkts=" << e.packetCount
+        << " bytes=" << e.bytesTransferred << "\n";
 
     // Initialize GLFW
     glfwInit();
