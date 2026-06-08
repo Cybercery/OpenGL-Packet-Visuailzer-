@@ -150,6 +150,31 @@ int main()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    // edge rendering
+
+	Shader edgeShader(
+		"../../../shaders/edge.vert",
+		"../../../shaders/edge.frag"
+	);
+
+	std::vector<glm::vec2> edgeVertices;
+	for (auto& e : cap.edges)
+	{
+		edgeVertices.push_back(cap.nodes[e.src].position);
+		edgeVertices.push_back(cap.nodes[e.dst].position);
+	}
+    // buffer setup
+    unsigned int edgeVAO, edgeVBO;
+    glGenVertexArrays(1, &edgeVAO);
+    glGenBuffers(1, &edgeVBO);
+
+    glBindVertexArray(edgeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, edgeVBO);
+    glBufferData(GL_ARRAY_BUFFER, edgeVertices.size() * sizeof(glm::vec2), edgeVertices.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
+    glEnableVertexAttribArray(0);
+    glBindVertexArray(0);
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -160,6 +185,18 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Draw
+		edgeShader.use();
+		edgeShader.setVec3("uColor", glm::vec3(0.3f, 0.5f, 0.7f));
+		edgeShader.setFloat("uAlpha", 0.6f);
+
+		glBindVertexArray(edgeVAO);
+		glDrawArrays(GL_LINES, 0, (int)edgeVertices.size());
+
+
+
+
+
+
         nodeShader.use();
         nodeShader.setFloat("uRadius", 18.0f);
         nodeShader.setVec2("uResolution", glm::vec2(SCR_WIDTH, SCR_HEIGHT));
